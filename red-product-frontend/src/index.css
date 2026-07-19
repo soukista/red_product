@@ -1,0 +1,37 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Vagues Figma : Dégradés radiaux répétitifs doux */
+.figma-wave-1 {
+  background: repeating-radial-gradient(
+    circle at 20% 80%,
+    rgba(255, 255, 255, 0.018) 0px,
+    rgba(255, 255, 255, 0.015) 30px,
+    rgba(255, 255, 255, 0.005) 50px,
+    transparent 70px,
+    transparent 100px
+  );
+}
+
+.figma-wave-2 {
+  background: repeating-radial-gradient(
+    circle at 80% 20%,
+    rgba(255, 255, 255, 0.015) 0px,
+    rgba(255, 255, 255, 0.012) 40px,
+    rgba(255, 255, 255, 0.003) 60px,
+    transparent 80px,
+    transparent 120px
+  );
+}
+
+.figma-wave-3 {
+  background: repeating-radial-gradient(
+    circle at 30% 30%,
+    rgba(255, 255, 255, 0.015) 0px,
+    rgba(255, 255, 255, 0.01) 35px,
+    rgba(255, 255, 255, 0.002) 55px,
+    transparent 75px,
+    transparent 110px
+  );
+}
