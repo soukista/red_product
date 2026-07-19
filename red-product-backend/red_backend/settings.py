@@ -131,9 +131,19 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+CORS_ALLOW_ALL_ORIGINS = True
+
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",   # react en dev (Vite)
+    "http://localhost:5173",
+    "https://red-product-alpha.vercel.app",
 ]
+
+cors_env = config('CORS_ALLOWED_ORIGINS', default='')
+if cors_env:
+    for origin in cors_env.split(','):
+        cleaned = origin.strip()
+        if cleaned and cleaned not in CORS_ALLOWED_ORIGINS:
+            CORS_ALLOWED_ORIGINS.append(cleaned)
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
