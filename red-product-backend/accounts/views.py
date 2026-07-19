@@ -29,7 +29,12 @@ class ForgotPasswordView(APIView):
             return Response({"error": "L'adresse email est requise."}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            user = User.objects.get(email=email)
+            # filter().first() gère proprement le cas où plusieurs comptes partagent le même e-mail (pas d'exception MultipleObjectsReturned)
+            user = User.objects.filter(email=email).first()
+            if not user:
+                # Pour éviter l'énumération d'e-mails (sécurité), on renvoie un message de succès même si le compte n'existe pas
+                return Response({"message": "Un e-mail de réinitialisation a été envoyé avec succès !"}, status=status.HTTP_200_OK)
+
             # Nom complet de l'utilisateur
             user_name = f"{user.first_name}" or "Administrateur"
             
@@ -53,9 +58,6 @@ class ForgotPasswordView(APIView):
                 [email],
                 fail_silently=False,
             )
-            return Response({"message": "Un e-mail de réinitialisation a été envoyé avec succès !"}, status=status.HTTP_200_OK)
-        except User.DoesNotExist:
-            # Pour des raisons de sécurité (éviter l'énumération de comptes), on renvoie le même message de réussite
             return Response({"message": "Un e-mail de réinitialisation a été envoyé avec succès !"}, status=status.HTTP_200_OK)
         except Exception as e:
             print("Erreur SMTP lors de l'envoi du mail :", e)
