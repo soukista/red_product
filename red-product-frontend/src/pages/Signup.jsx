@@ -86,6 +86,7 @@ function Signup() {
                 id="name"
                 type="text"
                 required
+                autoComplete="name"
                 placeholder="Nom"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -99,6 +100,7 @@ function Signup() {
                 id="email"
                 type="email"
                 required
+                autoComplete="email"
                 placeholder="E-mail"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -112,6 +114,7 @@ function Signup() {
                 id="password"
                 type="password"
                 required
+                autoComplete="new-password"
                 placeholder="Mot de passe"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}

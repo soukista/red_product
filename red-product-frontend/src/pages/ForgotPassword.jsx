@@ -88,6 +88,7 @@ function ForgotPassword() {
                 id="email"
                 type="email"
                 required
+                autoComplete="email"
                 placeholder="Votre e-mail"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}

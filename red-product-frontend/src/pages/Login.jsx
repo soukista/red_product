@@ -86,6 +86,7 @@ function Login() {
                 id="email"
                 type="email"
                 required
+                autoComplete="email"
                 placeholder="E-mail"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -99,6 +100,7 @@ function Login() {
                 id="password"
                 type="password"
                 required
+                autoComplete="current-password"
                 placeholder="Mot de passe"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
