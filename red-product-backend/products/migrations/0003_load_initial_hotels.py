@@ -1,14 +1,16 @@
 from django.db import migrations
 from django.core.management import call_command
+from django.contrib.auth.hashers import make_password
 
 def load_fixtures(apps, schema_editor):
     User = apps.get_model('auth', 'User')
-    # Créer l'administrateur par défaut (ID=1) s'il n'existe pas
+    # Créer l'administrateur par défaut (ID=1) s'il n'existe pas en utilisant create() et make_password()
     if not User.objects.filter(id=1).exists():
-        User.objects.create_user(
+        User.objects.create(
+            id=1,
             username='admin@redproduct.com',
             email='admin@redproduct.com',
-            password='AdminPassword123!',
+            password=make_password('AdminPassword123!'),
             first_name='Admin RED',
             is_staff=True,
             is_superuser=True
