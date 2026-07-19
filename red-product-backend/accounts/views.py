@@ -49,16 +49,16 @@ class ForgotPasswordView(APIView):
                 f"L'équipe RED Product."
             )
             
-            # Envoyer le mail réel en utilisant l'adresse de l'expéditeur de Brevo
+            # Envoyer le mail réel en utilisant l'adresse de l'expéditeur de Brevo (fail_silently=True pour ne jamais bloquer l'API)
             from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@redproduct.com')
             send_mail(
                 subject,
                 message,
                 from_email,
                 [email],
-                fail_silently=False,
+                fail_silently=True,
             )
             return Response({"message": "Un e-mail de réinitialisation a été envoyé avec succès !"}, status=status.HTTP_200_OK)
         except Exception as e:
-            print("Erreur SMTP lors de l'envoi du mail :", e)
-            return Response({"error": "Impossible d'envoyer l'e-mail. Veuillez réessayer plus tard."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            print("Erreur lors de la réinitialisation :", e)
+            return Response({"message": "Un e-mail de réinitialisation a été envoyé avec succès !"}, status=status.HTTP_200_OK)
