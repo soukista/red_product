@@ -41,23 +41,29 @@ class ForgotPasswordView(APIView):
             subject = "Réinitialisation de votre mot de passe - RED Product"
             message = (
                 f"Bonjour {user_name},\n\n"
-                f"Vous avez demandé la réinitialisation du mot de passe associé à ce compte RED Product.\n\n"
-                f"Cliquez sur le lien suivant pour accéder à la page de connexion et réinitialiser vos identifiants :\n"
-                f"http://localhost:5173/login\n\n"
-                f"Si vous n'êtes pas à l'origine de cette demande, vous pouvez ignorer cet e-mail en toute sécurité.\n\n"
+                f"Vous avez demandé la réinitialisation de votre mot de passe pour votre compte RED Product.\n\n"
+                f"Pour réinitialiser votre mot de passe, veuillez contacter l'administrateur système ou réessayez ultérieurement.\n\n"
                 f"Cordialement,\n"
                 f"L'équipe RED Product."
             )
             
-            # Envoyer le mail réel en utilisant l'adresse de l'expéditeur de Brevo (fail_silently=True pour ne jamais bloquer l'API)
-            from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@redproduct.com')
-            send_mail(
-                subject,
-                message,
-                from_email,
-                [email],
-                fail_silently=True,
-            )
+            from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'kanesoukista@gmail.com')
+
+            def send_async():
+                try:
+                    send_mail(
+                        subject,
+                        message,
+                        from_email,
+                        [email],
+                        fail_silently=True,
+                    )
+                except Exception as ex:
+                    print("Erreur envoi async mail :", ex)
+
+            import threading
+            threading.Thread(target=send_async, daemon=True).start()
+
             return Response({"message": "Un e-mail de réinitialisation a été envoyé avec succès !"}, status=status.HTTP_200_OK)
         except Exception as e:
             print("Erreur lors de la réinitialisation :", e)
