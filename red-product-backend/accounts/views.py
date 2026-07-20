@@ -14,6 +14,22 @@ class RegisterView(generics.CreateAPIView):
     # Tout le monde doit pouvoir s'inscrire, la route ne doit pas être bloquée
     permission_classes = [permissions.AllowAny]
 
+from django.contrib.auth.models import User
+from rest_framework import generics, permissions, status
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from django.core.mail import send_mail
+from django.conf import settings
+from rest_framework_simplejwt.views import TokenObtainPairView
+from .serializers import RegisterSerializer, EmailTokenObtainPairSerializer
+
+# 1. Vue d'inscription (Sign Up)
+class RegisterView(generics.CreateAPIView):
+    queryset = User.objects.all()
+    serializer_class = RegisterSerializer
+    # Tout le monde doit pouvoir s'inscrire, la route ne doit pas être bloquée
+    permission_classes = [permissions.AllowAny]
+
 # 2. Vue de connexion (Sign In)
 class EmailTokenObtainPairView(TokenObtainPairView):
     # On force la vue à utiliser notre traducteur personnalisé (par email)
@@ -24,19 +40,16 @@ class ForgotPasswordView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
-        email = request.data.get('email')
-        if not email:
+        raw_email = request.data.get('email', '')
+        if not raw_email:
             return Response({"error": "L'adresse email est requise."}, status=status.HTTP_400_BAD_REQUEST)
 
-        try:
-            # filter().first() gère proprement le cas où plusieurs comptes partagent le même e-mail (pas d'exception MultipleObjectsReturned)
-            user = User.objects.filter(email=email).first()
-            if not user:
-                # Pour éviter l'énumération d'e-mails (sécurité), on renvoie un message de succès même si le compte n'existe pas
-                return Response({"message": "Un e-mail de réinitialisation a été envoyé avec succès !"}, status=status.HTTP_200_OK)
+        email_clean = raw_email.strip().lower()
 
-            # Nom complet de l'utilisateur
-            user_name = f"{user.first_name}" or "Administrateur"
+        try:
+            # Recherche insensible à la casse par email ou par username
+            user = User.objects.filter(email__iexact=email_clean).first() or User.objects.filter(username__iexact=email_clean).first()
+            user_name = f"{user.first_name}" if (user and user.first_name) else "Administrateur"
             
             subject = "Réinitialisation de votre mot de passe - RED Product"
             message = (
@@ -55,8 +68,8 @@ class ForgotPasswordView(APIView):
                         subject,
                         message,
                         from_email,
-                        [email],
-                        fail_silently=True,
+                        [email_clean],
+                        fail_silently=False,
                     )
                 except Exception as ex:
                     print("Erreur envoi async mail :", ex)
