@@ -23,7 +23,7 @@ function CreateHotel() {
   const [error, setError] = useState('')
   const [successMsg, setSuccessMsg] = useState('')
 
-  // Redimensionner et compresser l'image à 800px de large max (haute qualité et netteté garantie)
+  // Redimensionner et compresser l'image à 600px de large max (ultra-léger et net)
   const resizeAndCompressImage = (file) => {
     return new Promise((resolve) => {
       const reader = new FileReader()
@@ -33,7 +33,7 @@ function CreateHotel() {
         img.src = event.target.result
         img.onload = () => {
           const canvas = document.createElement('canvas')
-          const maxWidth = 800
+          const maxWidth = 600
           
           let width = img.width
           let height = img.height
@@ -49,10 +49,16 @@ function CreateHotel() {
           const ctx = canvas.getContext('2d')
           ctx.drawImage(img, 0, 0, width, height)
           
-          // Exportation en JPEG de qualité 90% pour un rendu cristallin et léger
-          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.9)
+          // Exportation en JPEG ultra-léger de qualité 70%
+          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7)
           resolve(compressedBase64)
         }
+        img.onerror = () => {
+          resolve('')
+        }
+      }
+      reader.onerror = () => {
+        resolve('')
       }
     })
   }
