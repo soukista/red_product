@@ -1,5 +1,4 @@
 import logging
-import threading
 
 from django.conf import settings
 from django.contrib.auth.models import User
@@ -52,32 +51,36 @@ class ForgotPasswordView(APIView):
 
             from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'kanesoukista@11666410.brevosend.com')
 
-            logger.info(f"[EMAIL] Envoi vers {email_clean} depuis {from_email}")
-            logger.info(f"[EMAIL] SMTP Host={settings.EMAIL_HOST} Port={settings.EMAIL_PORT} User={settings.EMAIL_HOST_USER}")
+            # LOG de diagnostic visible dans les logs Render
+            logger.warning(f"[EMAIL-DEBUG] Tentative d'envoi à : {email_clean}")
+            logger.warning(f"[EMAIL-DEBUG] HOST={settings.EMAIL_HOST} PORT={settings.EMAIL_PORT}")
+            logger.warning(f"[EMAIL-DEBUG] USER={settings.EMAIL_HOST_USER}")
+            logger.warning(f"[EMAIL-DEBUG] PASSWORD présent : {'OUI' if settings.EMAIL_HOST_PASSWORD else 'NON - VARIABLE MANQUANTE'}")
+            logger.warning(f"[EMAIL-DEBUG] FROM={from_email}")
 
-            def send_async():
-                try:
-                    send_mail(
-                        subject,
-                        message,
-                        from_email,
-                        [email_clean],
-                        fail_silently=False,
-                    )
-                    logger.info(f"[EMAIL] Envoi réussi à {email_clean}")
-                except Exception as ex:
-                    logger.error(f"[EMAIL] ECHEC envoi SMTP: {ex}")
+            # Envoi SYNCHRONE pour capturer et retourner l'erreur exacte
+            send_mail(
+                subject,
+                message,
+                from_email,
+                [email_clean],
+                fail_silently=False,
+            )
 
-            threading.Thread(target=send_async, daemon=True).start()
-
+            logger.warning(f"[EMAIL-DEBUG] SUCCES - email envoyé à {email_clean}")
             return Response(
-                {"message": "Un e-mail de réinitialisation a été envoyé avec succès !"},
+                {"message": "E-mail envoyé avec succès !"},
                 status=status.HTTP_200_OK,
             )
 
         except Exception as e:
-            logger.exception(f"[EMAIL] Erreur inattendue: {e}")
+            # On retourne l'erreur REELLE dans la réponse pour diagnostiquer
+            error_detail = str(e)
+            logger.error(f"[EMAIL-DEBUG] ECHEC : {error_detail}")
             return Response(
-                {"message": "Un e-mail de réinitialisation a été envoyé avec succès !"},
-                status=status.HTTP_200_OK,
+                {
+                    "error": "Echec de l'envoi de l'email.",
+                    "detail": error_detail,
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
