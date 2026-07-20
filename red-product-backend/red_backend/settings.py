@@ -167,5 +167,5 @@ EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='b203ea001@smtp-brevo.com')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
 EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
 EMAIL_USE_SSL = False
-DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='kanesoukista@gmail.com')
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='kanesoukista@11666410.brevosend.com')
 EMAIL_TIMEOUT = 10
