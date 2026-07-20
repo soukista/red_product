@@ -1,6 +1,11 @@
 from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView
-from .views import RegisterView, EmailTokenObtainPairView, ForgotPasswordView
+from .views import (
+    RegisterView, 
+    EmailTokenObtainPairView, 
+    ForgotPasswordView, 
+    ResetPasswordConfirmView
+)
 
 urlpatterns = [
     # Route d'inscription
@@ -12,6 +17,9 @@ urlpatterns = [
     # Route pour renouveler le token Access quand il expire
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     
-    # Route de mot de passe oublié
+    # Route de mot de passe oublié (Demande par email)
     path('forgot-password/', ForgotPasswordView.as_view(), name='forgot_password'),
+    
+    # Route de confirmation avec nouveau mot de passe
+    path('reset-password-confirm/', ResetPasswordConfirmView.as_view(), name='reset_password_confirm'),
 ]
