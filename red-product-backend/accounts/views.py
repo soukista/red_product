@@ -24,7 +24,7 @@ class RegisterView(generics.CreateAPIView):
 class EmailTokenObtainPairView(TokenObtainPairView):
     serializer_class = EmailTokenObtainPairSerializer
 
-# 3. Vue de mot de passe oublié — envoi via Brevo REST API (port 443, jamais bloqué)
+# 3. Vue de mot de passe oublié — envoi via Resend API (port 443, jamais bloqué)
 class ForgotPasswordView(APIView):
     permission_classes = [permissions.AllowAny]
 
@@ -43,38 +43,38 @@ class ForgotPasswordView(APIView):
             user_name = user.first_name if (user and user.first_name) else "Administrateur"
 
             subject = "Réinitialisation de votre mot de passe - RED Product"
-            message = (
-                f"Bonjour {user_name},\n\n"
-                f"Vous avez demandé la réinitialisation de votre mot de passe pour votre compte RED Product.\n\n"
-                f"Pour réinitialiser votre mot de passe, veuillez contacter l'administrateur système ou réessayez ultérieurement.\n\n"
-                f"Cordialement,\n"
-                f"L'équipe RED Product."
-            )
+            html_content = f"""
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                <h2 style="color: #e53e3e;">RED Product</h2>
+                <p>Bonjour <strong>{user_name}</strong>,</p>
+                <p>Vous avez demandé la réinitialisation de votre mot de passe pour votre compte RED Product.</p>
+                <p>Pour réinitialiser votre mot de passe, veuillez contacter l'administrateur système ou réessayez ultérieurement.</p>
+                <br>
+                <p>Cordialement,</p>
+                <p><strong>L'équipe RED Product</strong></p>
+            </div>
+            """
 
-            from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'kanesoukista@11666410.brevosend.com')
-            brevo_api_key = getattr(settings, 'BREVO_API_KEY', '')
+            resend_api_key = getattr(settings, 'RESEND_API_KEY', '')
 
-            logger.warning(f"[EMAIL] Envoi à {email_clean} depuis {from_email}")
-            logger.warning(f"[EMAIL] Clé BREVO_API_KEY présente : {'OUI' if brevo_api_key else 'NON'}")
-
-            if not brevo_api_key:
+            if not resend_api_key:
+                logger.error("[EMAIL] RESEND_API_KEY manquante sur le serveur.")
                 return Response(
-                    {"error": "Configuration manquante.", "detail": "BREVO_API_KEY non définie sur le serveur."},
+                    {"error": "Configuration email manquante.", "detail": "RESEND_API_KEY non définie."},
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 )
 
-            # Envoi via API REST Brevo HTTPS (port 443 — contourne le blocage Render du port 587)
-            url = "https://api.brevo.com/v3/smtp/email"
+            # Envoi via API Resend HTTPS (port 443 — jamais bloqué par Render)
+            url = "https://api.resend.com/emails"
             headers = {
-                "accept": "application/json",
-                "content-type": "application/json",
-                "api-key": brevo_api_key,
+                "Authorization": f"Bearer {resend_api_key}",
+                "Content-Type": "application/json",
             }
             payload = {
-                "sender": {"name": "RED Product", "email": from_email},
-                "to": [{"email": email_clean, "name": user_name}],
+                "from": "onboarding@resend.dev",
+                "to": [email_clean],
                 "subject": subject,
-                "textContent": message,
+                "html": html_content,
             }
 
             req = urllib.request.Request(
@@ -86,7 +86,7 @@ class ForgotPasswordView(APIView):
 
             with urllib.request.urlopen(req, timeout=15) as resp:
                 body = resp.read().decode("utf-8")
-                logger.warning(f"[EMAIL] Succès Brevo API! status={resp.status} body={body}")
+                logger.info(f"[EMAIL] Succes Resend! status={resp.status} body={body}")
 
             return Response(
                 {"message": "E-mail de réinitialisation envoyé avec succès !"},
@@ -95,9 +95,9 @@ class ForgotPasswordView(APIView):
 
         except urllib.error.HTTPError as http_err:
             body = http_err.read().decode("utf-8")
-            logger.error(f"[EMAIL] Brevo API HTTP {http_err.code}: {body}")
+            logger.error(f"[EMAIL] Resend API HTTP {http_err.code}: {body}")
             return Response(
-                {"error": "Echec de l'envoi.", "detail": f"Brevo {http_err.code}: {body}"},
+                {"error": "Echec de l'envoi.", "detail": f"Resend {http_err.code}: {body}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
         except Exception as e:

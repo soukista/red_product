@@ -175,5 +175,8 @@ EMAIL_TIMEOUT = 10
 # À ajouter dans les variables d'environnement Render sous le nom BREVO_API_KEY
 BREVO_API_KEY = config('BREVO_API_KEY', default='')
 
+# Clé API Resend (resend.com) — pour l'envoi d'emails via HTTPS port 443
+RESEND_API_KEY = config('RESEND_API_KEY', default='')
+
 
 
