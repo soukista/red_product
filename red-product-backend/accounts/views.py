@@ -14,22 +14,6 @@ class RegisterView(generics.CreateAPIView):
     # Tout le monde doit pouvoir s'inscrire, la route ne doit pas être bloquée
     permission_classes = [permissions.AllowAny]
 
-from django.contrib.auth.models import User
-from rest_framework import generics, permissions, status
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from django.core.mail import send_mail
-from django.conf import settings
-from rest_framework_simplejwt.views import TokenObtainPairView
-from .serializers import RegisterSerializer, EmailTokenObtainPairSerializer
-
-# 1. Vue d'inscription (Sign Up)
-class RegisterView(generics.CreateAPIView):
-    queryset = User.objects.all()
-    serializer_class = RegisterSerializer
-    # Tout le monde doit pouvoir s'inscrire, la route ne doit pas être bloquée
-    permission_classes = [permissions.AllowAny]
-
 # 2. Vue de connexion (Sign In)
 class EmailTokenObtainPairView(TokenObtainPairView):
     # On force la vue à utiliser notre traducteur personnalisé (par email)
