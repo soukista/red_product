@@ -23,6 +23,7 @@ function EditHotel() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [successMsg, setSuccessMsg] = useState('')
 
   // Charger les données de l'hôtel actuel à l'initialisation
   useEffect(() => {
@@ -129,6 +130,12 @@ function EditHotel() {
       }
     }
 
+    if (!finalImage) {
+      setError("La photo de l'hôtel est obligatoire. Veuillez sélectionner une image.")
+      setSaving(false)
+      return
+    }
+
     const payload = {
       name: name,
       address: address,
@@ -146,8 +153,10 @@ function EditHotel() {
         }
       })
       
-      alert(`Hôtel "${name}" mis à jour avec succès !`)
-      navigate('/hotels')
+      setSuccessMsg(`Hôtel "${name}" mis à jour avec succès ! Redirection...`)
+      setTimeout(() => {
+        navigate('/hotels')
+      }, 1200)
     } catch (err) {
       console.error("Erreur lors de la mise à jour de l'hôtel :", err)
       const errorMsg = err.response?.data?.name?.[0] || 
@@ -179,6 +188,16 @@ function EditHotel() {
       {error && (
         <div className="bg-red-50 text-red-600 text-xs py-2.5 px-4 rounded-lg mb-6 border border-red-100 max-w-4xl">
           {error}
+        </div>
+      )}
+
+      {/* Banner de succès */}
+      {successMsg && (
+        <div className="bg-emerald-50 text-emerald-700 text-xs py-3 px-4 rounded-lg mb-6 border border-emerald-200 shadow-sm flex items-center space-x-2 max-w-4xl">
+          <svg className="w-4 h-4 text-emerald-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+          </svg>
+          <span className="font-semibold">{successMsg}</span>
         </div>
       )}
 

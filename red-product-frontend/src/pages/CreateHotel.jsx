@@ -21,6 +21,7 @@ function CreateHotel() {
   
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [successMsg, setSuccessMsg] = useState('')
 
   // Redimensionner et compresser l'image à 800px de large max (haute qualité et netteté garantie)
   const resizeAndCompressImage = (file) => {
@@ -84,29 +85,22 @@ function CreateHotel() {
     // Correspondance de la devise pour correspondre aux choix de la BDD (XOF, EUR, USD)
     const mappedCurrency = currency === 'F XOF' ? 'XOF' : currency === 'Euro' ? 'EUR' : 'USD'
 
-    // Conversion et redimensionnement de l'image sélectionnée en Base64
-    let finalImage = ''
-    if (selectedFile) {
-      try {
-        finalImage = await resizeAndCompressImage(selectedFile)
-      } catch (err) {
-        console.error("Erreur lors du redimensionnement de l'image :", err)
-      }
+    // Vérification obligatoire de la sélection d'une photo
+    if (!selectedFile) {
+      setError("La photo de l'hôtel est obligatoire. Veuillez sélectionner un fichier d'image.")
+      setLoading(false)
+      return
     }
 
-    // Si aucune image n'a été uploadée, on utilise une image d'illustration par défaut
-    if (!finalImage) {
-      const hotelImages = [
-        'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=500&q=80',
-        'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?auto=format&fit=crop&w=500&q=80',
-        'https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?auto=format&fit=crop&w=500&q=80',
-        'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&w=500&q=80',
-        'https://images.unsplash.com/photo-1455587734955-081b22074882?auto=format&fit=crop&w=500&q=80',
-        'https://images.unsplash.com/photo-1564507592333-c60657eea523?auto=format&fit=crop&w=500&q=80',
-        'https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&w=500&q=80',
-        'https://images.unsplash.com/photo-1584132967334-10e028bd69f7?auto=format&fit=crop&w=500&q=80'
-      ]
-      finalImage = hotelImages[Math.floor(Math.random() * hotelImages.length)]
+    // Conversion et redimensionnement de l'image sélectionnée en Base64
+    let finalImage = ''
+    try {
+      finalImage = await resizeAndCompressImage(selectedFile)
+    } catch (err) {
+      console.error("Erreur lors du redimensionnement de l'image :", err)
+      setError("Erreur lors du traitement de l'image. Veuillez sélectionner un autre fichier.")
+      setLoading(false)
+      return
     }
 
     const payload = {
@@ -126,8 +120,10 @@ function CreateHotel() {
         }
       })
       
-      alert(`Hôtel "${name}" enregistré avec succès !`)
-      navigate('/hotels')
+      setSuccessMsg(`Hôtel "${name}" créé avec succès ! Redirection...`)
+      setTimeout(() => {
+        navigate('/hotels')
+      }, 1200)
     } catch (err) {
       console.error("Erreur lors de la création de l'hôtel :", err)
       const errorMsg = err.response?.data?.name?.[0] || 
@@ -160,6 +156,16 @@ function CreateHotel() {
       {error && (
         <div className="bg-red-50 text-red-600 text-xs py-2.5 px-4 rounded-lg mb-6 border border-red-100 max-w-4xl">
           {error}
+        </div>
+      )}
+
+      {/* Banner de succès */}
+      {successMsg && (
+        <div className="bg-emerald-50 text-emerald-700 text-xs py-3 px-4 rounded-lg mb-6 border border-emerald-200 shadow-sm flex items-center space-x-2 max-w-4xl">
+          <svg className="w-4 h-4 text-emerald-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+          </svg>
+          <span className="font-semibold">{successMsg}</span>
         </div>
       )}
 

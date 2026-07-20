@@ -10,6 +10,7 @@ function Signup() {
   const [password, setPassword] = useState('')
   const [acceptTerms, setAcceptTerms] = useState(false)
   const [error, setError] = useState('')
+  const [successMsg, setSuccessMsg] = useState('')
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
 
@@ -20,6 +21,7 @@ function Signup() {
       return
     }
     setError('')
+    setSuccessMsg('')
     setLoading(true)
     try {
       await axios.post(`${API_BASE_URL}/accounts/register/`, {
@@ -27,8 +29,10 @@ function Signup() {
         email: email,
         password: password
       })
-      alert('Inscription réussie ! Vous pouvez maintenant vous connecter.')
-      navigate('/login')
+      setSuccessMsg('Inscription réussie ! Redirection vers la page de connexion...')
+      setTimeout(() => {
+        navigate('/login')
+      }, 1500)
     } catch (err) {
       console.error(err)
       const errorMsg = err.response?.data?.email?.[0] || 
@@ -76,6 +80,16 @@ function Signup() {
           {error && (
             <div className="bg-red-50 text-red-600 text-xs py-2 px-3 rounded mb-4 text-center font-medium border border-red-100">
               {error}
+            </div>
+          )}
+
+          {/* Banner de succès */}
+          {successMsg && (
+            <div className="bg-emerald-50 text-emerald-700 text-xs py-2 px-3 rounded mb-4 text-center font-medium border border-emerald-200 shadow-sm flex items-center justify-center space-x-2">
+              <svg className="w-4 h-4 text-emerald-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+              </svg>
+              <span>{successMsg}</span>
             </div>
           )}
 
