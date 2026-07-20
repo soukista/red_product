@@ -1,8 +1,6 @@
-import json
 import logging
-import urllib.error
-import urllib.request
 
+import resend
 from django.conf import settings
 from django.contrib.auth.models import User
 from rest_framework import generics, permissions, status
@@ -24,7 +22,7 @@ class RegisterView(generics.CreateAPIView):
 class EmailTokenObtainPairView(TokenObtainPairView):
     serializer_class = EmailTokenObtainPairSerializer
 
-# 3. Vue de mot de passe oublié — envoi via Resend API (port 443, jamais bloqué)
+# 3. Vue de mot de passe oublié — envoi via SDK Resend officiel
 class ForgotPasswordView(APIView):
     permission_classes = [permissions.AllowAny]
 
@@ -56,52 +54,32 @@ class ForgotPasswordView(APIView):
             """
 
             resend_api_key = getattr(settings, 'RESEND_API_KEY', '')
-
             if not resend_api_key:
-                logger.error("[EMAIL] RESEND_API_KEY manquante sur le serveur.")
+                logger.error("[EMAIL] RESEND_API_KEY manquante.")
                 return Response(
                     {"error": "Configuration email manquante.", "detail": "RESEND_API_KEY non définie."},
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 )
 
-            # Envoi via API Resend HTTPS (port 443 — jamais bloqué par Render)
-            url = "https://api.resend.com/emails"
-            headers = {
-                "Authorization": f"Bearer {resend_api_key}",
-                "Content-Type": "application/json",
-            }
-            payload = {
+            resend.api_key = resend_api_key
+
+            params = {
                 "from": "onboarding@resend.dev",
                 "to": [email_clean],
                 "subject": subject,
                 "html": html_content,
             }
 
-            req = urllib.request.Request(
-                url,
-                data=json.dumps(payload).encode("utf-8"),
-                headers=headers,
-                method="POST",
-            )
-
-            with urllib.request.urlopen(req, timeout=15) as resp:
-                body = resp.read().decode("utf-8")
-                logger.info(f"[EMAIL] Succes Resend! status={resp.status} body={body}")
+            response = resend.Emails.send(params)
+            logger.info(f"[EMAIL] Succes Resend SDK! id={response}")
 
             return Response(
                 {"message": "E-mail de réinitialisation envoyé avec succès !"},
                 status=status.HTTP_200_OK,
             )
 
-        except urllib.error.HTTPError as http_err:
-            body = http_err.read().decode("utf-8")
-            logger.error(f"[EMAIL] Resend API HTTP {http_err.code}: {body}")
-            return Response(
-                {"error": "Echec de l'envoi.", "detail": f"Resend {http_err.code}: {body}"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
         except Exception as e:
-            logger.error(f"[EMAIL] Erreur inattendue: {e}")
+            logger.error(f"[EMAIL] Erreur Resend SDK: {e}")
             return Response(
                 {"error": "Echec de l'envoi.", "detail": str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
