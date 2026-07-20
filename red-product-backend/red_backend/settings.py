@@ -173,10 +173,10 @@ EMAIL_TIMEOUT = 10
 # Clé API REST Brevo — récupérable sur app.brevo.com → Paramètres → Clés API
 # Format : xkeysib-xxxxxxxxxxxx
 # À ajouter dans les variables d'environnement Render sous le nom BREVO_API_KEY
-BREVO_API_KEY = config('BREVO_API_KEY', default='')
+# Clé API SendGrid — récupérable sur app.sendgrid.com → Settings → API Keys
+# À ajouter dans les variables d'environnement Render sous le nom SENDGRID_API_KEY
+SENDGRID_API_KEY = config('SENDGRID_API_KEY', default='')
 
-# Clé API Resend (resend.com) — pour l'envoi d'emails via HTTPS port 443
-RESEND_API_KEY = config('RESEND_API_KEY', default='')
 
 
 

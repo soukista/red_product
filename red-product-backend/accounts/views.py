@@ -1,12 +1,13 @@
 import logging
 
-import resend
 from django.conf import settings
 from django.contrib.auth.models import User
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail
 
 from .serializers import EmailTokenObtainPairSerializer, RegisterSerializer
 
@@ -22,7 +23,7 @@ class RegisterView(generics.CreateAPIView):
 class EmailTokenObtainPairView(TokenObtainPairView):
     serializer_class = EmailTokenObtainPairSerializer
 
-# 3. Vue de mot de passe oublié — envoi via SDK Resend officiel
+# 3. Vue de mot de passe oublié — envoi via SendGrid
 class ForgotPasswordView(APIView):
     permission_classes = [permissions.AllowAny]
 
@@ -53,25 +54,27 @@ class ForgotPasswordView(APIView):
             </div>
             """
 
-            resend_api_key = getattr(settings, 'RESEND_API_KEY', '')
-            if not resend_api_key:
-                logger.error("[EMAIL] RESEND_API_KEY manquante.")
+            sendgrid_api_key = getattr(settings, 'SENDGRID_API_KEY', '')
+            from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'kanesoukista@gmail.com')
+
+            if not sendgrid_api_key:
+                logger.error("[EMAIL] SENDGRID_API_KEY manquante.")
                 return Response(
-                    {"error": "Configuration email manquante.", "detail": "RESEND_API_KEY non définie."},
+                    {"error": "Configuration email manquante.", "detail": "SENDGRID_API_KEY non définie."},
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 )
 
-            resend.api_key = resend_api_key
+            message = Mail(
+                from_email=from_email,
+                to_emails=email_clean,
+                subject=subject,
+                html_content=html_content,
+            )
 
-            params = {
-                "from": "onboarding@resend.dev",
-                "to": [email_clean],
-                "subject": subject,
-                "html": html_content,
-            }
+            sg = SendGridAPIClient(sendgrid_api_key)
+            response = sg.send(message)
 
-            response = resend.Emails.send(params)
-            logger.info(f"[EMAIL] Succes Resend SDK! id={response}")
+            logger.info(f"[EMAIL] Succès SendGrid! status={response.status_code}")
 
             return Response(
                 {"message": "E-mail de réinitialisation envoyé avec succès !"},
@@ -79,7 +82,7 @@ class ForgotPasswordView(APIView):
             )
 
         except Exception as e:
-            logger.error(f"[EMAIL] Erreur Resend SDK: {e}")
+            logger.error(f"[EMAIL] Erreur SendGrid: {e}")
             return Response(
                 {"error": "Echec de l'envoi.", "detail": str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
