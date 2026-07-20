@@ -63,6 +63,33 @@ class ForgotPasswordView(APIView):
             from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'kanesoukista@gmail.com')
 
             def send_async():
+                api_key = getattr(settings, 'EMAIL_HOST_PASSWORD', '')
+                from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'kanesoukista@11666410.brevosend.com')
+
+                # 1. Tentative d'envoi via l'API REST HTTPS de Brevo (Port 443 - Jamais bloqué par Render)
+                try:
+                    import json
+                    import urllib.request
+                    url = "https://api.brevo.com/v3/smtp/email"
+                    headers = {
+                        "accept": "application/json",
+                        "content-type": "application/json",
+                        "api-key": api_key
+                    }
+                    payload = {
+                        "sender": {"name": "RED Product", "email": from_email},
+                        "to": [{"email": email_clean, "name": user_name}],
+                        "subject": subject,
+                        "textContent": message
+                    }
+                    req = urllib.request.Request(url, data=json.dumps(payload).encode('utf-8'), headers=headers, method='POST')
+                    with urllib.request.urlopen(req, timeout=10) as resp:
+                        print(f"Mail envoyé via Brevo HTTPS API avec succès! Status: {resp.status}")
+                        return
+                except Exception as err_api:
+                    print("Échec Brevo HTTPS API, tentative SMTP fallback...", err_api)
+
+                # 2. Fallback via SMTP Django
                 try:
                     send_mail(
                         subject,
@@ -72,7 +99,7 @@ class ForgotPasswordView(APIView):
                         fail_silently=False,
                     )
                 except Exception as ex:
-                    print("Erreur envoi async mail :", ex)
+                    print("Erreur envoi async mail SMTP :", ex)
 
             import threading
             threading.Thread(target=send_async, daemon=True).start()
