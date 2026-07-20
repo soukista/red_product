@@ -6,9 +6,12 @@ from .models import Hotel
 from .serializers import HotelSerializer
 
 class HotelViewSet(viewsets.ModelViewSet):
-    queryset = Hotel.objects.all().order_by('-created_at')
     serializer_class = HotelSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        # Chaque administrateur ne voit et ne gère QUE ses propres hôtels
+        return Hotel.objects.filter(created_by=self.request.user).order_by('-created_at')
 
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)
@@ -17,8 +20,8 @@ class DashboardStatsView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        # On renvoie le nombre réel d'hôtels et d'utilisateurs inscrits en BDD
-        hotels_count = Hotel.objects.count()
+        # On renvoie le nombre d'hôtels propres à cet administrateur
+        hotels_count = Hotel.objects.filter(created_by=request.user).count()
         users_count = User.objects.count()
         
         return Response({
