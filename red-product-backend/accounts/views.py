@@ -1,8 +1,10 @@
+import json
 import logging
+import urllib.error
+import urllib.request
 
 from django.conf import settings
 from django.contrib.auth.models import User
-from django.core.mail import send_mail
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -22,7 +24,7 @@ class RegisterView(generics.CreateAPIView):
 class EmailTokenObtainPairView(TokenObtainPairView):
     serializer_class = EmailTokenObtainPairSerializer
 
-# 3. Vue de mot de passe oublié
+# 3. Vue de mot de passe oublié — envoi via Brevo REST API (port 443, jamais bloqué)
 class ForgotPasswordView(APIView):
     permission_classes = [permissions.AllowAny]
 
@@ -50,37 +52,57 @@ class ForgotPasswordView(APIView):
             )
 
             from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'kanesoukista@11666410.brevosend.com')
+            brevo_api_key = getattr(settings, 'BREVO_API_KEY', '')
 
-            # LOG de diagnostic visible dans les logs Render
-            logger.warning(f"[EMAIL-DEBUG] Tentative d'envoi à : {email_clean}")
-            logger.warning(f"[EMAIL-DEBUG] HOST={settings.EMAIL_HOST} PORT={settings.EMAIL_PORT}")
-            logger.warning(f"[EMAIL-DEBUG] USER={settings.EMAIL_HOST_USER}")
-            logger.warning(f"[EMAIL-DEBUG] PASSWORD présent : {'OUI' if settings.EMAIL_HOST_PASSWORD else 'NON - VARIABLE MANQUANTE'}")
-            logger.warning(f"[EMAIL-DEBUG] FROM={from_email}")
+            logger.warning(f"[EMAIL] Envoi à {email_clean} depuis {from_email}")
+            logger.warning(f"[EMAIL] Clé BREVO_API_KEY présente : {'OUI' if brevo_api_key else 'NON'}")
 
-            # Envoi SYNCHRONE pour capturer et retourner l'erreur exacte
-            send_mail(
-                subject,
-                message,
-                from_email,
-                [email_clean],
-                fail_silently=False,
+            if not brevo_api_key:
+                return Response(
+                    {"error": "Configuration manquante.", "detail": "BREVO_API_KEY non définie sur le serveur."},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
+
+            # Envoi via API REST Brevo HTTPS (port 443 — contourne le blocage Render du port 587)
+            url = "https://api.brevo.com/v3/smtp/email"
+            headers = {
+                "accept": "application/json",
+                "content-type": "application/json",
+                "api-key": brevo_api_key,
+            }
+            payload = {
+                "sender": {"name": "RED Product", "email": from_email},
+                "to": [{"email": email_clean, "name": user_name}],
+                "subject": subject,
+                "textContent": message,
+            }
+
+            req = urllib.request.Request(
+                url,
+                data=json.dumps(payload).encode("utf-8"),
+                headers=headers,
+                method="POST",
             )
 
-            logger.warning(f"[EMAIL-DEBUG] SUCCES - email envoyé à {email_clean}")
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                body = resp.read().decode("utf-8")
+                logger.warning(f"[EMAIL] Succès Brevo API! status={resp.status} body={body}")
+
             return Response(
-                {"message": "E-mail envoyé avec succès !"},
+                {"message": "E-mail de réinitialisation envoyé avec succès !"},
                 status=status.HTTP_200_OK,
             )
 
-        except Exception as e:
-            # On retourne l'erreur REELLE dans la réponse pour diagnostiquer
-            error_detail = str(e)
-            logger.error(f"[EMAIL-DEBUG] ECHEC : {error_detail}")
+        except urllib.error.HTTPError as http_err:
+            body = http_err.read().decode("utf-8")
+            logger.error(f"[EMAIL] Brevo API HTTP {http_err.code}: {body}")
             return Response(
-                {
-                    "error": "Echec de l'envoi de l'email.",
-                    "detail": error_detail,
-                },
+                {"error": "Echec de l'envoi.", "detail": f"Brevo {http_err.code}: {body}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+        except Exception as e:
+            logger.error(f"[EMAIL] Erreur inattendue: {e}")
+            return Response(
+                {"error": "Echec de l'envoi.", "detail": str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )

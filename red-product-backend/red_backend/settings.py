@@ -170,4 +170,10 @@ EMAIL_USE_SSL = False
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='kanesoukista@11666410.brevosend.com')
 EMAIL_TIMEOUT = 10
 
+# Clé API REST Brevo — récupérable sur app.brevo.com → Paramètres → Clés API
+# Format : xkeysib-xxxxxxxxxxxx
+# À ajouter dans les variables d'environnement Render sous le nom BREVO_API_KEY
+BREVO_API_KEY = config('BREVO_API_KEY', default='')
+
+
 
