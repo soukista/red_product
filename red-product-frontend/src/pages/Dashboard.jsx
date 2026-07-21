@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import DashboardLayout from '../components/DashboardLayout'
 import { API_BASE_URL } from '../config'
 
 function Dashboard() {
+  const navigate = useNavigate()
   const [statsData, setStatsData] = useState({
     hotels_count: 0,
     users_count: 0,
@@ -82,6 +84,7 @@ function Dashboard() {
       value: statsData.hotels_count.toString(),
       label: 'Hôtels',
       bgColor: 'bg-[#9c27b0] text-white',
+      link: '/hotels',
       icon: (
         <span className="font-bold text-xl select-none">P</span>
       )
@@ -129,9 +132,10 @@ function Dashboard() {
       {/* Statistics Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {stats.map((stat, idx) => (
-          <div 
-            key={idx} 
-            className="bg-white rounded-xl p-6 flex items-center gap-4 shadow-sm border border-gray-100 hover:shadow-md transition duration-200"
+          <div
+            key={idx}
+            onClick={() => stat.link && navigate(stat.link)}
+            className={`bg-white rounded-xl p-6 flex items-center gap-4 shadow-sm border border-gray-100 hover:shadow-md transition duration-200 ${stat.link ? 'cursor-pointer hover:border-gray-300' : ''}`}
           >
             {/* Circle Icon Container */}
             <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${stat.bgColor}`}>
@@ -146,6 +150,9 @@ function Dashboard() {
                 </span>
                 <span className="text-gray-500 font-medium text-sm">{stat.label}</span>
               </div>
+              {stat.link && (
+                <span className="text-[11px] text-gray-400">Cliquer pour voir →</span>
+              )}
             </div>
           </div>
         ))}

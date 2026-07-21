@@ -4,6 +4,14 @@ import axios from 'axios'
 import DashboardLayout from '../components/DashboardLayout'
 import { API_BASE_URL } from '../config'
 
+// Validation numéro sénégalais: commence par 70, 75, 76, 77 ou 78 + 7 chiffres
+const validateSenegalPhone = (phone) => {
+  if (!phone || !phone.trim()) return true
+  const cleaned = phone.replace(/[\s\-().+]/g, '')
+  const local = cleaned.startsWith('221') ? cleaned.slice(3) : cleaned
+  return /^7[05678]\d{7}$/.test(local)
+}
+
 function EditHotel() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -24,6 +32,7 @@ function EditHotel() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [successMsg, setSuccessMsg] = useState('')
+  const [phoneError, setPhoneError] = useState('')
 
   // Charger les données de l'hôtel actuel à l'initialisation
   useEffect(() => {
@@ -115,11 +124,14 @@ function EditHotel() {
       return
     }
 
-    // Nettoyage et formatage du prix (ex: "25.000" devient 25000)
     const cleanPrice = parseFloat(price.replace(/\s/g, '').replace(/\./g, '').replace(/,/g, '.'))
-    
-    // Correspondance de la devise
     const mappedCurrency = currency === 'F XOF' ? 'XOF' : currency === 'Euro' ? 'EUR' : 'USD'
+
+    if (phone.trim() && !validateSenegalPhone(phone)) {
+      setPhoneError('Numéro sénégalais invalide. Doit commencer par 70, 75, 76, 77 ou 78.')
+      setSaving(false)
+      return
+    }
 
     let finalImage = previewUrl // Garder la photo existante par défaut
     if (selectedFile) {
@@ -285,16 +297,27 @@ function EditHotel() {
                 <div>
                   <label className="block text-sm font-semibold text-gray-600 mb-1.5" htmlFor="hotel-phone">
                     Numéro de téléphone
+                    <span className="text-gray-400 font-normal ml-1">(Sénégal)</span>
                   </label>
                   <input
                     id="hotel-phone"
-                    type="text"
-                    required
-                    placeholder="Ex: +221 77 777 77 77"
+                    type="tel"
+                    placeholder="Ex: 77 123 45 67"
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    className="w-full border border-gray-200 focus:border-gray-400 outline-none rounded-lg px-4 py-2.5 text-sm text-gray-700 transition"
+                    onChange={(e) => {
+                      setPhone(e.target.value)
+                      if (e.target.value.trim() && !validateSenegalPhone(e.target.value)) {
+                        setPhoneError('Numéro invalide. Doit commencer par 70, 75, 76, 77 ou 78')
+                      } else {
+                        setPhoneError('')
+                      }
+                    }}
+                    className={`w-full border ${phoneError ? 'border-red-400 bg-red-50' : 'border-gray-200'} focus:border-gray-400 outline-none rounded-lg px-4 py-2.5 text-sm text-gray-700 transition`}
                   />
+                  {phoneError
+                    ? <p className="text-red-500 text-[11px] mt-1">{phoneError}</p>
+                    : <p className="text-gray-400 text-[11px] mt-1">Commence par 70, 75, 76, 77 ou 78 — 9 chiffres</p>
+                  }
                 </div>
 
                 {/* Devise */}
@@ -355,17 +378,17 @@ function EditHotel() {
 
             {/* Submit Action Buttons */}
             <div className="flex justify-end gap-3 pt-4">
-              <Link 
+              <Link
                 to="/hotels"
-                className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium px-5 py-2.5 rounded-lg text-sm transition duration-150"
+                className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium px-5 py-2.5 rounded-lg text-sm transition duration-150 cursor-pointer"
               >
                 Annuler
               </Link>
               <button
                 type="submit"
-                disabled={saving}
-                className={`bg-[#3d4449] hover:bg-[#2d3236] text-white font-medium px-6 py-2.5 rounded-lg text-sm shadow-sm transition duration-150 ${
-                  saving ? 'opacity-70 cursor-not-allowed' : ''
+                disabled={saving || !!phoneError}
+                className={`bg-[#3d4449] hover:bg-[#2d3236] text-white font-medium px-6 py-2.5 rounded-lg text-sm shadow-sm transition duration-150 cursor-pointer ${
+                  saving || phoneError ? 'opacity-70 cursor-not-allowed' : ''
                 }`}
               >
                 {saving ? 'Enregistrement...' : 'Sauvegarder les modifications'}
