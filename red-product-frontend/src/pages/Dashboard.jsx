@@ -150,9 +150,7 @@ function Dashboard() {
                 </span>
                 <span className="text-gray-500 font-medium text-sm">{stat.label}</span>
               </div>
-              {stat.link && (
-                <span className="text-[11px] text-gray-400">Cliquer pour voir →</span>
-              )}
+
             </div>
           </div>
         ))}
