@@ -104,8 +104,8 @@ function Dashboard() {
   return (
     <DashboardLayout pageTitle="Dashboard">
       
-      {/* Welcome Banner Section */}
-      <div className="bg-white rounded-lg p-6 mb-6 shadow-sm border border-gray-100 flex justify-between items-center">
+      {/* Welcome Banner — pleine largeur, collé directement sous le header, sans espace gris */}
+      <div className="bg-white -mx-8 -mt-8 px-8 py-5 mb-8 border-b border-gray-200 flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-light text-gray-800">
             Bienvenue sur <span className="font-semibold">RED Product</span>
