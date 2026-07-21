@@ -4,7 +4,8 @@ from .views import (
     RegisterView, 
     EmailTokenObtainPairView, 
     ForgotPasswordView, 
-    ResetPasswordConfirmView
+    ResetPasswordConfirmView,
+    UserProfileView,
 )
 
 urlpatterns = [
@@ -22,4 +23,7 @@ urlpatterns = [
     
     # Route de confirmation avec nouveau mot de passe
     path('reset-password-confirm/', ResetPasswordConfirmView.as_view(), name='reset_password_confirm'),
+
+    # Route de profil (GET = lire, PUT = mettre à jour nom + avatar)
+    path('profile/', UserProfileView.as_view(), name='user_profile'),
 ]

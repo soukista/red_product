@@ -12,6 +12,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
 
+from .models import UserProfile
 from .serializers import EmailTokenObtainPairSerializer, RegisterSerializer
 
 logger = logging.getLogger(__name__)
@@ -154,3 +155,41 @@ class ResetPasswordConfirmView(APIView):
                 {"error": "Le lien de réinitialisation est invalide ou a déjà été utilisé / expiré."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+
+# 5. Vue pour consulter et mettre à jour le profil (nom + avatar)
+class UserProfileView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        """Retourne les infos de profil de l'administrateur connecté."""
+        user = request.user
+        profile, _ = UserProfile.objects.get_or_create(user=user)
+        return Response({
+            'name': user.first_name or '',
+            'email': user.email,
+            'avatar': profile.avatar or '',
+        })
+
+    def put(self, request):
+        """Met à jour le nom et/ou l'avatar de l'administrateur connecté."""
+        user = request.user
+        profile, _ = UserProfile.objects.get_or_create(user=user)
+
+        name = request.data.get('name', '').strip()
+        avatar = request.data.get('avatar', None)
+
+        if name:
+            user.first_name = name
+            user.save(update_fields=['first_name'])
+
+        if avatar is not None:
+            profile.avatar = avatar
+            profile.save(update_fields=['avatar'])
+
+        return Response({
+            'message': 'Profil mis à jour avec succès.',
+            'name': user.first_name,
+            'email': user.email,
+            'avatar': profile.avatar or '',
+        })

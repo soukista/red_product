@@ -1,1 +1,10 @@
 clean_repo/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.env
+db.sqlite3
+node_modules/
+dist/
+.DS_Store

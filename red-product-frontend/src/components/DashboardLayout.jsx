@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
+import axios from 'axios'
 import bgImage from '../assets/background.jpg'
+import { API_BASE_URL } from '../config'
 
 function DashboardLayout({ children, pageTitle, searchQuery, setSearchQuery }) {
   const location = useLocation()
@@ -23,6 +25,25 @@ function DashboardLayout({ children, pageTitle, searchQuery, setSearchQuery }) {
   // Chargement de l'email
   const userEmail = localStorage.getItem('user_email') || sessionStorage.getItem('user_email') || 'sakina@redproduct.com'
 
+  // Chargement de la photo de profil depuis l'API (persistant en base PostgreSQL)
+  const [userAvatar, setUserAvatar] = useState(null)
+
+  // Charger le profil (nom + avatar) depuis l'API au montage
+  useEffect(() => {
+    const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token')
+    if (!token) return
+    axios.get(`${API_BASE_URL}/accounts/profile/`, {
+      headers: { Authorization: `Bearer ${token}` }
+    }).then(res => {
+      if (res.data.avatar) setUserAvatar(res.data.avatar)
+      if (res.data.name) {
+        setUserName(res.data.name)
+        if (localStorage.getItem('user_name')) localStorage.setItem('user_name', res.data.name)
+        if (sessionStorage.getItem('user_name')) sessionStorage.setItem('user_name', res.data.name)
+      }
+    }).catch(() => {}) // Silencieux si l'API échoue
+  }, [])
+
   // Gestion des notifications dynamiques
   const [notifications, setNotifications] = useState([
     { id: 1, text: `Bienvenue ${userName} sur votre tableau de bord RED Product.`, time: "À l'instant", read: false },
@@ -39,25 +60,64 @@ function DashboardLayout({ children, pageTitle, searchQuery, setSearchQuery }) {
   // Gestion du tiroir de menu mobile (responsive)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
-  // Mettre à jour le profil localement
-  const handleUpdateProfile = (e) => {
+  // Mettre à jour le profil via l'API (nom + avatar sauvegardés en base PostgreSQL)
+  const handleUpdateProfile = async (e) => {
     e.preventDefault()
     if (!tempName.trim()) return
 
-    if (localStorage.getItem('user_name')) {
-      localStorage.setItem('user_name', tempName)
+    const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token')
+    try {
+      const res = await axios.put(`${API_BASE_URL}/accounts/profile/`, {
+        name: tempName,
+        avatar: pendingAvatar !== null ? pendingAvatar : undefined,
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      // Mise à jour locale
+      if (localStorage.getItem('user_name')) localStorage.setItem('user_name', res.data.name)
+      if (sessionStorage.getItem('user_name')) sessionStorage.setItem('user_name', res.data.name)
+      setUserName(res.data.name)
+      if (res.data.avatar !== undefined) setUserAvatar(res.data.avatar || null)
+    } catch {
+      // Fallback local si API indisponible
+      if (localStorage.getItem('user_name')) localStorage.setItem('user_name', tempName)
+      if (sessionStorage.getItem('user_name')) sessionStorage.setItem('user_name', tempName)
+      setUserName(tempName)
+      if (pendingAvatar) setUserAvatar(pendingAvatar)
     }
-    if (sessionStorage.getItem('user_name')) {
-      sessionStorage.setItem('user_name', tempName)
-    }
-    setUserName(tempName)
+
+    setPendingAvatar(null)
     setShowProfileModal(false)
-    
-    // Pousser une notification de mise à jour du profil
     setNotifications(prev => [
       { id: Date.now(), text: "Votre profil administrateur a été mis à jour.", time: "À l'instant", read: false },
       ...prev
     ])
+  }
+
+  // Traitement de la photo sélectionnée (redimensionnement + Base64)
+  const [pendingAvatar, setPendingAvatar] = useState(null)
+  const handleAvatarChange = (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = (ev) => {
+      const img = new Image()
+      img.src = ev.target.result
+      img.onload = () => {
+        const canvas = document.createElement('canvas')
+        const size = 200
+        canvas.width = size
+        canvas.height = size
+        const ctx = canvas.getContext('2d')
+        // Recadrage centré (crop carré)
+        const minSide = Math.min(img.width, img.height)
+        const sx = (img.width - minSide) / 2
+        const sy = (img.height - minSide) / 2
+        ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, size, size)
+        setPendingAvatar(canvas.toDataURL('image/jpeg', 0.8))
+      }
+    }
+    reader.readAsDataURL(file)
   }
 
   // Marquer toutes les notifications comme lues
@@ -249,9 +309,12 @@ function DashboardLayout({ children, pageTitle, searchQuery, setSearchQuery }) {
             title="Gérer mon profil"
           >
             <div className="flex items-center gap-3">
-              {/* Avatar */}
-              <div className="w-10 h-10 rounded-full bg-gray-500 overflow-hidden border-2 border-white flex items-center justify-center select-none">
-                <span className="text-white font-bold text-sm">{userInitial}</span>
+              {/* Avatar sidebar */}
+              <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white flex items-center justify-center select-none flex-shrink-0">
+                {userAvatar
+                  ? <img src={userAvatar} alt="avatar" className="w-full h-full object-cover" />
+                  : <div className="w-full h-full bg-gray-500 flex items-center justify-center"><span className="text-white font-bold text-sm">{userInitial}</span></div>
+                }
               </div>
               {/* Infos Utilisateur */}
               <div>
@@ -368,12 +431,16 @@ function DashboardLayout({ children, pageTitle, searchQuery, setSearchQuery }) {
             <div 
               onClick={() => {
                 setTempName(userName)
+                setPendingAvatar(null)
                 setShowProfileModal(true)
               }}
-              className="w-8 h-8 rounded-full bg-[#3d4449] overflow-hidden flex items-center justify-center text-white font-bold text-xs border border-gray-200 cursor-pointer hover:opacity-90 transition select-none"
+              className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center border border-gray-200 cursor-pointer hover:opacity-90 transition select-none flex-shrink-0"
               title="Mon Profil"
             >
-              {userInitial}
+              {userAvatar
+                ? <img src={userAvatar} alt="avatar" className="w-full h-full object-cover" />
+                : <div className="w-full h-full bg-[#3d4449] flex items-center justify-center"><span className="text-white font-bold text-xs">{userInitial}</span></div>
+              }
             </div>
 
             {/* Logout Button */}
@@ -412,11 +479,29 @@ function DashboardLayout({ children, pageTitle, searchQuery, setSearchQuery }) {
             </div>
             
             <form onSubmit={handleUpdateProfile} className="space-y-4">
-              {/* Profile Avatar inside dialog */}
+              {/* Avatar cliquable pour changer la photo */}
               <div className="flex flex-col items-center gap-2 mb-4">
-                <div className="w-16 h-16 rounded-full bg-[#3d4449] text-white font-bold text-2xl flex items-center justify-center border-2 border-white shadow-md select-none">
-                  {userInitial}
+                <div className="relative group">
+                  <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-gray-200 shadow-md">
+                    {(pendingAvatar || userAvatar)
+                      ? <img src={pendingAvatar || userAvatar} alt="avatar" className="w-full h-full object-cover" />
+                      : <div className="w-full h-full bg-[#3d4449] flex items-center justify-center"><span className="text-white font-bold text-2xl">{userInitial}</span></div>
+                    }
+                  </div>
+                  {/* Overlay changer photo */}
+                  <label
+                    htmlFor="avatar-upload"
+                    className="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition cursor-pointer"
+                    title="Changer la photo"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                  </label>
+                  <input id="avatar-upload" type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
                 </div>
+                <span className="text-[10px] text-gray-400">Survolez pour changer la photo</span>
                 <span className="text-[10px] text-green-600 font-semibold bg-green-50 px-2.5 py-0.5 rounded-full border border-green-100 flex items-center gap-1">
                   <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-ping"></span> Admin En Ligne
                 </span>
